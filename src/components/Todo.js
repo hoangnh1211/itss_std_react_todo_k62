@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 
 /* 
   【Todoのデータ構成】
-　・key：Todoを特定するID（String）
-　・text：Todoの内容（String）
-　・done：完了状態（Boolean true:完了済み,, false:未完了）
+ ・key：Todoを特定するID（String）
+ ・text：Todoの内容（String）
+ ・done：完了状態（Boolean true:完了済み,, false:未完了）
 */
 
 /* コンポーネント */
@@ -16,68 +16,64 @@ import Filter from './Filter';
 import useStorage from '../hooks/storage';
 
 /* ライブラリ */
-import {getKey} from "../lib/util";
+import { getKey } from "../lib/util";
+import { addFirebaseItem, clearFirebaseItem, getFirebaseItems, updateFirebaseItem } from '../lib/firebase';
 
 function Todo() {
   const [items, putItems] = React.useState([
-      /* テストコード 開始 *  /* テストコード 終了 */
+    /* テストコード 開始 *  /* テストコード 終了 */
   ]);
-  useEffect(()=>{
-    let follow = JSON.parse(localStorage.getItem("follow")) || [];
+  useEffect(async() => {
+    let follow = await getFirebaseItems() || [];
     putItems(follow)
-  },[])
-
-  const [tab,setTab]=useState("all")
-  const colorgrey={
-    color:"gray"
+  }, [items.length])
+  const [tab, setTab] = useState("all")
+  const colorgrey = {
+    color: "gray"
   }
-  const colorblack={
-    color:"black"
+  const colorblack = {
+    color: "black"
   }
-  const add=(e)=>{
-    if(e.key === "Enter"){
-      putItems([...items,{
-        key:getKey(),
+  const add = async (e) => {
+    if (e.key === "Enter") {
+      putItems([...items, {
         text: e.target.value,
-        done:false
+        done: false
       }])
-      console.log([...items,{
-        key:getKey(),
+      await addFirebaseItem({
         text: e.target.value,
-       }])
-       localStorage.setItem("follow", JSON.stringify([...items,{
-        key:getKey(),
-        text: e.target.value,
-        done:false
-       }]));
-    } 
-  }
-  const changecolor=(key)=>{
-    const index = items.findIndex(value=>value.key===key)
-    if (index !== -1){
-      if (items[index].done===false){
-        items[index].done=true
-      } else {
-        items[index].done=false
-      }
-      console.log(items)
-      putItems([...items])    
+        done: false
+      })
     }
   }
-  const changtab=(value)=>{
+  const changecolor = async (id) => {
+    const index = items.findIndex(value => value.id === id)
+    if (index !== -1) {
+      if (items[index].done === false) {
+        items[index].done = true
+      } else {
+        items[index].done = false
+      }
+      await updateFirebaseItem(items[index],items[index].id)
+      putItems([...items])
+    }
+  }
+  const changtab = (value) => {
     setTab(value)
   }
-  const deleteTodo = ()=>{
+  const deleteTodo = () => {
     putItems([])
-    localStorage.removeItem("follow")
+    items.map(async item => {
+      await clearFirebaseItem(item);
+    })
   }
-  let listItems=null
-  if (tab==="all"){
-    listItems=items
-  } else if (tab==="notht"){
-    listItems= items.filter(value=>value.done ===false)
+  let listItems = []
+  if (tab === "all") {
+    listItems = items
+  } else if (tab === "notht") {
+    listItems = items.filter(value => value.done === false)
   } else {
-    listItems= items.filter(value=>value.done ===true)
+    listItems = items.filter(value => value.done === true)
   }
   let checked
   return (
@@ -85,14 +81,14 @@ function Todo() {
       <div className="panel-heading">
         ITSS ToDoアプリ
       </div>
-      <input class="input" type="text" onKeyDown={add}  />
-      <p onClick={()=>{changtab("all")}} >全て</p>
-      <p onClick={()=>{changtab("notht")}}>未完了</p>
-      <p onClick={()=>{changtab("ht")}}>完了済み</p>
+      <input class="input" type="text" onKeyDown={add} />
+      <p onClick={() => { changtab("all") }} >全て</p>
+      <p onClick={() => { changtab("notht") }}>未完了</p>
+      <p onClick={() => { changtab("ht") }}>完了済み</p>
       {listItems.map(item => (
-        <label className="panel-block"style= { item.done===false ? colorblack: colorgrey}>
-            <input type="checkbox" onClick={()=>{changecolor(item.key)}} checked= {item.done===false ? null: "checked"} />
-            {item.text}
+        <label className="panel-block" style={item.done === false ? colorblack : colorgrey}>
+          <input type="checkbox" onClick={() => { changecolor(item.id) }} checked={item.done === false ? null : "checked"} />
+          {item.text}
         </label>
       ))}
       <div className="panel-block">
